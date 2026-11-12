@@ -1,0 +1,29 @@
+name: Atualizar precos
+on:
+  schedule:
+    - cron: '0 11 * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+  pages: write
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Ler o motor de reservas
+        run: node update-prices.mjs
+      - name: Publicar prices.json
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "precos-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add prices.json
+          if git diff --cached --quiet; then echo "sem mudancas"; exit 0; fi
+          git commit -m "Atualiza precos do motor de reservas"
+          git push
+          gh api -X POST repos/${{ github.repository }}/pages/builds || true
